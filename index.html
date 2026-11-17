@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>地城勇者：Python 語法對決</title>
+  <style>
+    :root {
+      --bg-dark: #0f111a;
+      --panel-bg: #1a1d2e;
+      --border-glow: #4e5d94;
+      --hero-hp: #2ecc71;
+      --monster-hp: #e74c3c;
+      --gold: #f1c40f;
+      --cyan: #00d2d3;
+      --text-main: #ecf0f1;
+      --text-muted: #95a5a6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image:
+        radial-gradient(circle at 50% 20%, rgba(78, 93, 148, 0.2), transparent 60%),
+        linear-gradient(to bottom, #0f111a, #161925);
+      color: var(--text-main);
+      font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    /* 主遊戲容器 */
+    .game-container {
+      width: 100%;
+      max-width: 860px;
+      background: var(--panel-bg);
+      border: 3px solid var(--border-glow);
+      border-radius: 16px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(78, 93, 148, 0.3);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 畫面震動與閃紅光特效 */
+    .shake {
+      animation: shakeAnim 0.4s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    @keyframes shakeAnim {
+      10%, 90% { transform: translate3d(-4px, 0, 0); }
+      20%, 80% { transform: translate3d(6px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+      40%, 60% { transform: translate3d(8px, 0, 0); }
+    }
+
+    .damage-flash {
+      position: absolute;
+      inset: 0;
+      background: rgba(231, 76, 60, 0.35);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 20;
+    }
+
+    /* 頂部資訊列 */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .game-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--gold);
+      text-shadow: 0 2px 8px rgba(241, 196, 15, 0.4);
+      letter-spacing: 1px;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      font-weight: bold;
+    }
+
+    .badge {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 0.95rem;
+    }
+
+    .btn-sound {
+      background: #2c3e50;
+      color: #fff;
+      border: 1px solid #576574;
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: 0.2s;
+    }
+
+    .btn-sound:hover {
+      background: #34495e;
+    }
+
+    /* 戰鬥舞台 */
+    .battle-stage {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      background: linear-gradient(180deg, #121521 0%, #1e2336 100%);
+      border: 2px solid #2f3640;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 18px;
+      position: relative;
+      min-height: 220px;
+    }
+
+    .combatant {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .status-card {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .name-row {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+
+    .bar-bg {
+      width: 100%;
+      height: 14px;
+      background: #2c3e50;
+      border-radius: 7px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+
+    .hero-hp-fill {
+      background: linear-gradient(90deg, #27ae60, #2ecc71);
+    }
+
+    .monster-hp-fill {
+      background: linear-gradient(90deg, #c0392b, #e74c3c);
+    }
+
+    /* 怪物蓄力倒數條 */
+    .timer-wrapper {
+      margin-top: 8px;
+    }
+
+    .timer-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--gold);
+      margin-bottom: 3px;
+    }
+
+    .timer-bar-bg {
+      width: 100%;
+      height: 10px;
+      background: #1e272e;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .timer-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: #2ecc71;
+      transition: width 0.05s linear, background-color 0.2s ease;
+    }
+
+    /* 角色造型動畫 */
+    .sprite {
+      font-size: 4.5rem;
+      margin: 14px 0 4px;
+      filter: drop-shadow(0 8px 10px rgba(0,0,0,0.6));
+      transition: transform 0.2s ease;
+      animation: idleFloat 2s ease-in-out infinite;
+    }
+
+    @keyframes idleFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .hero-attack {
+      animation: heroSlash 0.35s ease;
+    }
+
+    @keyframes heroSlash {
+      0% { transform: translateX(0); }
+      50% { transform: translateX(90px) scale(1.15); }
+      100% { transform: translateX(0); }
+    }
+
+    .monster-attack {
+      animation: monsterLunge 0.35s ease;
+    }
+
+    @keyframes monsterLunge {
+      0% { transform: translateX(0); }
+      50% { transform: translateX(-90px) scale(1.15); }
+      100% { transform: translateX(0); }
+    }
+
+    .combo-tag {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--cyan);
+      height: 20px;
+    }
+
+    /* 飄浮傷害數字 */
+    .floating-text {
+      position: absolute;
+      font-weight: 900;
+      font-size: 1.5rem;
+      pointer-events: none;
+      animation: floatUp 1s ease-out forwards;
+      z-index: 15;
+      text-shadow: 0 2px 6px #000;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(0.8); }
+      30% { transform: translateY(-20px) scale(1.2); }
+      100% { opacity: 0; transform: translateY(-55px) scale(1); }
+    }
+
+    /* 題目捲軸區 */
+    .question-box {
+      background: #131622;
+      border: 2px solid #3d4870;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+    }
+
+    .q-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .q-topic {
+      background: #2f3542;
+      color: var(--cyan);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .q-progress {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .q-prompt {
+      font-size: 1.05rem;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .code-block {
+      background: #0b0d14;
+      border-left: 4px solid var(--gold);
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 1.05rem;
+      color: #a3be8c;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+
+    /* 技能卡牌選項區 */
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .skill-card {
+      background: linear-gradient(145deg, #23283d, #1b1f30);
+      border: 2px solid #485480;
+      border-radius: 10px;
+      padding: 14px 16px;
+      color: #fff;
+      font-family: Consolas, "Courier New", "Microsoft JhengHei", monospace;
+      font-size: 1.05rem;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.18s ease;
+    }
+
+    .skill-card:hover:not(:disabled) {
+      transform: translateY(-3px);
+      border-color: var(--gold);
+      box-shadow: 0 6px 15px rgba(241, 196, 15, 0.25);
+      background: linear-gradient(145deg, #2c334d, #22273b);
+    }
+
+    .skill-card:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .key-badge {
+      background: var(--gold);
+      color: #111;
+      font-weight: 900;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* 彈窗遮罩（開始畫面 / 錯題解析 / 結算畫面） */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(11, 13, 20, 0.94);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      z-index: 30;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .modal-card {
+      background: #1e2235;
+      border: 2px solid var(--gold);
+      border-radius: 14px;
+      padding: 28px;
+      max-width: 560px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 1.7rem;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+
+    .modal-desc {
+      color: #dcdde1;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      font-size: 1rem;
+    }
+
+    .rule-list {
+      text-align: left;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 14px 18px;
+      border-radius: 10px;
+      margin-bottom: 22px;
+      font-size: 0.92rem;
+      line-height: 1.7;
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, #f39c12, #f1c40f);
+      color: #111;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 28px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn-primary:hover {
+      transform: scale(1.04);
+      box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
+    }
+
+    /* 錯題解析區塊 */
+    .explain-box {
+      background: rgba(231, 76, 60, 0.15);
+      border: 1px solid #e74c3c;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: left;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .correct-ans-text {
+      color: #2ecc71;
+      font-weight: bold;
+      font-family: Consolas, monospace;
+      font-size: 1.05rem;
+    }
+
+    /* 結算錯題回顧列表 */
+    .review-list {
+      text-align: left;
+      margin-top: 16px;
+      margin-bottom: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+
+    .review-item {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 0;
+    }
+
+    .review-item:last-child {
+      border-bottom: none;
+    }
+
+    @media (max-width: 640px) {
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+      .battle-stage {
+        gap: 10px;
+        padding: 12px;
+      }
+      .sprite {
+        font-size: 3.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-container" id="gameContainer">
+  <div class="damage-flash" id="damageFlash"></div>
+
+  <!-- 頂部狀態列 -->
+  <div class="top-bar">
+    <div class="game-title">⚔️ 地城勇者：Python 語法對決</div>
+    <div class="stats-bar">
+      <div class="badge">分數: <span id="scoreDisplay" style="color: var(--gold);">0</span></div>
+      <button class="btn-sound" id="soundToggleBtn">🔊 音效：開</button>
+    </div>
+  </div>
+
+  <!-- 戰鬥舞台 -->
+  <div class="battle-stage" id="battleStage">
+    <!-- 左側：勇者 -->
+    <div class="combatant">
+      <div class="status-card">
+        <div class="name-row">
+          <span>🧙‍♂️ Python 勇者</span>
+          <span><span id="heroHpText">100</span> / 100</span>
+        </div>
+        <div class="bar-bg">
+          <div class="bar-fill hero-hp-fill" id="heroHpBar" style="width: 100%;"></div>
+        </div>
+        <div class="combo-tag" id="comboDisplay"></div>
+      </div>
+      <div class="sprite" id="heroSprite">🧙‍♂️</div>
+    </div>
+
+    <!-- 右側：怪物 -->
+    <div class="combatant">
+      <div class="status-card">
+        <div class="name-row">
+          <span id="monsterName">🟢 語法史萊姆</span>
+          <span><span id="monsterHpText">120</span> / <span id="monsterMaxHpText">120</span></span>
+        </div>
+        <div class="bar-bg">
+          <div class="bar-fill monster-hp-fill" id="monsterHpBar" style="width: 100%;"></div>
+        </div>
+        <div class="timer-wrapper">
+          <div class="timer-label">
+            <span>⏳ 怪物蓄力倒數</span>
+            <span id="timerText">15.0s</span>
+          </div>
+          <div class="timer-bar-bg">
+            <div class="timer-bar-fill" id="timerBar"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sprite" id="monsterSprite">🟢</div>
+    </div>
+  </div>
+
+  <!-- 題目捲軸區 -->
+  <div class="question-box">
+    <div class="q-header">
+      <span class="q-topic" id="qTopic">【變數與運算】</span>
+      <span class="q-progress">第 <span id="qIndexText">1</span> / 15 關</span>
+    </div>
+    <div class="q-prompt" id="qPrompt">題目載入中...</div>
+    <pre class="code-block" id="qCode">print("Hello Python")</pre>
+  </div>
+
+  <!-- 四選一技能卡牌 -->
+  <div class="options-grid" id="optionsGrid"></div>
+
+  <!-- 1. 開始遊戲遮罩 -->
+  <div class="modal-overlay" id="startModal">
+    <div class="modal-card">
+      <div class="modal-title">⚔️ 地城勇者：Python 語法對決</div>
+      <p class="modal-desc">每次挑戰將從 <strong>34 題基礎語法題庫</strong>中隨機抽出 <strong>15 題</strong>進行對決！在怪物蓄力完成前施放正確咒語吧！</p>
+      <div class="rule-list">
+        <div>⏱️ <strong>限時對決：</strong>每題限時 <strong>15 秒</strong>，答對越快傷害越高！</div>
+        <div>⚡ <strong>極速暴擊（剩餘 &gt; 10 秒）：</strong>造成 <strong>35 點</strong> 暴擊傷害</div>
+        <div>⚔️ <strong>普通斬擊（剩餘 5 ~ 10 秒）：</strong>造成 <strong>25 點</strong> 傷害</div>
+        <div>🗡️ <strong>勉強擦傷（剩餘 &lt; 5 秒）：</strong>造成 <strong>15 點</strong> 傷害</div>
+        <div>💥 <strong>答錯或超時：</strong>受到怪物反擊扣除 <strong>10 HP</strong></div>
+      </div>
+      <button class="btn-primary" id="startBtn">開始地城挑戰</button>
+    </div>
+  </div>
+
+  <!-- 2. 答錯/超時解析遮罩 -->
+  <div class="modal-overlay hidden" id="explainModal">
+    <div class="modal-card">
+      <div class="modal-title" id="explainTitle" style="color: #e74c3c;">💥 遭到怪物反擊！</div>
+      <div class="explain-box">
+        <div style="margin-bottom: 8px;">✅ 正確咒語：<span class="correct-ans-text" id="explainCorrectAns"></span></div>
+        <div id="explainText">解析內容</div>
+      </div>
+      <button class="btn-primary" id="nextAfterExplainBtn">重整旗鼓，繼續戰鬥</button>
+    </div>
+  </div>
+
+  <!-- 3. 結算畫面遮罩 -->
+  <div class="modal-overlay hidden" id="endModal">
+    <div class="modal-card">
+      <div class="modal-title" id="endTitle">🏆 地城通關！</div>
+      <p class="modal-desc" id="endRankBadge" style="font-size: 1.2rem; font-weight: bold; color: var(--cyan);"></p>
+      <div class="rule-list" style="text-align: center;">
+        <div>最終得分：<strong id="finalScore" style="color: var(--gold); font-size: 1.2rem;">0</strong> 分</div>
+        <div>最高連擊：<strong id="finalMaxCombo">0</strong> Combo ｜ 平均答題：<strong id="finalAvgTime">0</strong> 秒</div>
+      </div>
+      <div id="wrongReviewContainer" class="hidden">
+        <div style="text-align: left; font-weight: bold; color: #ff7675;">📜 戰敗錯題復習筆記：</div>
+        <div class="review-list" id="wrongReviewList"></div>
+      </div>
+      <button class="btn-primary" id="restartBtn">🔄 再戰一場（重新隨機抽 15 題）</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ==========================================
+  // 1. 內建 34 題 Python 基礎語法總題庫（進度至 while 迴圈）
+  // ==========================================
+  const QUESTION_BANK = [
+    // --- 類別一：變數、運算子、輸入與型別 (1~9) ---
+    {
+      topic: "整數除法運算",
+      prompt: "這段程式碼會輸出什麼結果？",
+      code: "a = 10\nb = 3\nprint(a // b)",
+      options: ["3.33", "3", "1", "30"],
+      answer: "3",
+      explanation: "// 是「整數除法（地板除）」，會無條件捨去小數點，所以 10 // 3 等於 3。"
+    },
+    {
+      topic: "資料型別轉換",
+      prompt: "想要計算 hp - damage 而不發生 TypeError，應該怎麼寫？",
+      code: 'hp = "50"\ndamage = 10',
+      options: ["str(hp) - damage", "int(hp) - damage", "hp - str(damage)", 'float("hp") - damage'],
+      answer: "int(hp) - damage",
+      explanation: '"50" 加上引號是字串（str），必須先用 int() 轉成整數才能與數字相減。'
+    },
+    {
+      topic: "餘數運算子",
+      prompt: "螢幕上會印出哪個數字？",
+      code: "x = 17 % 5\nprint(x)",
+      options: ["3", "2", "3.4", "5"],
+      answer: "2",
+      explanation: "% 是取餘數運算，17 除以 5 商為 3，餘數為 2。"
+    },
+    {
+      topic: "次方運算子",
+      prompt: "計算魔力加倍的咒語，最終輸出是多少？",
+      code: "power = 2 ** 4\nprint(power)",
+      options: ["8", "16", "6", "24"],
+      answer: "16",
+      explanation: "** 在 Python 中代表次方運算，2 ** 4 就是 2 的 4 次方等於 16。"
+    },
+    {
+      topic: "複合指定運算子",
+      prompt: "經過兩次攻擊強化後，atk 的數值是多少？",
+      code: "atk = 10\natk += 5\natk *= 2\nprint(atk)",
+      options: ["20", "30", "25", "15"],
+      answer: "30",
+      explanation: "atk 先加 5 變成 15，接著乘以 2 變成 30。"
+    },
+    {
+      topic: "資料型別檢查",
+      prompt: "執行以下程式會印出什麼？",
+      code: "val = 3.14\nprint(type(val))",
+      options: ["<class 'int'>", "<class 'float'>", "<class 'str'>", "<class 'num'>"],
+      answer: "<class 'float'>",
+      explanation: "帶有小數點的數字在 Python 中屬於浮點數（float）型別。"
+    },
+    {
+      topic: "變數交換技巧",
+      prompt: "執行完這段 Python 交換寫法後，x 與 y 分別是多少？",
+      code: "x, y = 10, 20\nx, y = y, x\nprint(x, y)",
+      options: ["10 20", "20 10", "20 20", "10 10"],
+      answer: "20 10",
+      explanation: "Python 支援多重賦值，x, y = y, x 可以直接將兩變數的值互換。"
+    },
+    {
+      topic: "布林值轉換 bool()",
+      prompt: "下列程式碼會印出 True 還是 False？",
+      code: 'print(bool(""))',
+      options: ["True", "False", "None", "Error"],
+      answer: "False",
+      explanation: '在 Python 中，空字串 ""、數字 0 或空串列 [] 轉成布林值皆為 False。'
+    },
+    {
+      topic: "input() 輸入型別",
+      prompt: "使用者輸入 10 後，這段程式會印出什麼？",
+      code: 'x = input("請輸入數字: ")\nprint(x * 2)',
+      options: ["20", "1010", "102", "Error"],
+      answer: "1010",
+      explanation: 'input() 接收到的資料預設都是「字串（str）」，字串 "10" 乘以 2 會重複變成 "1010"。'
+    },
+
+    // --- 類別二：字串與大小寫操作 (10~17) ---
+    {
+      topic: "字串重複與拼接",
+      prompt: "施放這個咒語會印出什麼？",
+      code: 'spell = "Py" * 2 + "!"\nprint(spell)',
+      options: ["Py2!", "PyPy!", "Py!Py!", "Error"],
+      answer: "PyPy!",
+      explanation: '字串乘以整數 2 會重複兩次變成 "PyPy"，再用 + 接上 "!"。'
+    },
+    {
+      topic: "字串長度 len()",
+      prompt: "這把神劍的名字有幾個字元？",
+      code: 'sword = "Excalibur"\nprint(len(sword))',
+      options: ["8", "9", "10", "7"],
+      answer: "9",
+      explanation: 'len() 會計算字串總字元數，"Excalibur" 共有 9 個英文字母。'
+    },
+    {
+      topic: "字串轉全大寫 upper()",
+      prompt: "這段程式碼會輸出什麼？",
+      code: 'msg = "python"\nprint(msg.upper())',
+      options: ["Python", "PYTHON", "python", "Error"],
+      answer: "PYTHON",
+      explanation: ".upper() 方法會將字串中所有英文字母轉換為全大寫。"
+    },
+    {
+      topic: "字串轉全小寫 lower()",
+      prompt: "施放封印咒語將巨龍名字轉成全小寫，會印出什麼？",
+      code: 'boss = "DRAGON"\nprint(boss.lower())',
+      options: ["dragon", "Dragon", "DRAGON", "Error"],
+      answer: "dragon",
+      explanation: ".lower() 方法會將字串中所有英文字母轉換為全小寫。"
+    },
+    {
+      topic: "檢查全大寫 isupper()",
+      prompt: "驗證密碼是否為全大寫，這段程式會印出 True 還是 False？",
+      code: 'code = "BOSS"\nprint(code.isupper())',
+      options: ["True", "False", "BOSS", "Error"],
+      answer: "True",
+      explanation: '.isupper() 用來檢查字串中的所有英文字母是否「全部都是大寫」，"BOSS" 符合條件故回傳 True。'
+    },
+    {
+      topic: "檢查全小寫 islower()",
+      prompt: "檢查字串是否為全小寫，螢幕會印出什麼？",
+      code: 'word = "PyThOn"\nprint(word.islower())',
+      options: ["True", "False", "python", "Error"],
+      answer: "False",
+      explanation: '.islower() 必須所有英文字母都是小寫才會回傳 True，因為 "PyThOn" 含有大寫字母，所以回傳 False。'
+    },
+    {
+      topic: "首字大寫 capitalize()",
+      prompt: "使用 capitalize() 整理技能名稱，會輸出什麼？",
+      code: 'skill = "fireball"\nprint(skill.capitalize())',
+      options: ["Fireball", "FIREBALL", "fireball", "FireBall"],
+      answer: "Fireball",
+      explanation: ".capitalize() 會把字串的第一個字元變成大寫，其餘字元保持小寫。"
+    },
+    {
+      topic: "字串取代 replace()",
+      prompt: "執行後螢幕會顯示什麼？",
+      code: 'text = "HP: 100"\nprint(text.replace("100", "250"))',
+      options: ["HP: 100", "HP: 250", "250", "Error"],
+      answer: "HP: 250",
+      explanation: '.replace("100", "250") 會將字串中的 "100" 替換成 "250"。'
+    },
+
+    // --- 類別三：條件判斷與邏輯運算 (18~23) ---
+    {
+      topic: "條件判斷 if/else",
+      prompt: "程式執行後會輸出什麼？",
+      code: 'mp = 30\nif mp >= 50:\n    print("大絕招")\nelif mp >= 20:\n    print("火球術")\nelse:\n    print("普攻")',
+      options: ["大絕招", "火球術", "普攻", "不會輸出任何東西"],
+      answer: "火球術",
+      explanation: "mp 為 30，不符合 >= 50，接著往下檢查 elif mp >= 20 條件成立，因此印出火球術。"
+    },
+    {
+      topic: "邏輯運算子 and",
+      prompt: "寶箱門鎖會回傳 True 還是 False？",
+      code: "has_key = False\nis_admin = True\nprint(has_key and is_admin)",
+      options: ["True", "False", "None", "Error"],
+      answer: "False",
+      explanation: "and 運算子必須「左右兩邊同時為 True」結果才會是 True，只要有一個 False 就是 False。"
+    },
+    {
+      topic: "邏輯運算子 or",
+      prompt: "城門守衛會放行嗎（True 或 False）？",
+      code: "has_pass = False\nis_vip = True\nprint(has_pass or is_vip)",
+      options: ["True", "False", "None", "Error"],
+      answer: "True",
+      explanation: "or 運算子只要「其中一邊為 True」，整體結果就會是 True。"
+    },
+    {
+      topic: "成員運算子 in",
+      prompt: "檢查背包裡是否有紅藥水，會印出什麼？",
+      code: 'bag = ["地圖", "火把", "鑰匙"]\nprint("紅藥水" in bag)',
+      options: ["True", "False", "-1", "None"],
+      answer: "False",
+      explanation: 'in 用來檢查元素是否存在於串列中，因為 bag 裡沒有 "紅藥水"，所以回傳 False。'
+    },
+    {
+      topic: "比較運算子 == 與 !=",
+      prompt: "這段程式碼的輸出結果為何？",
+      code: "gold = 100\nprint(gold != 100)",
+      options: ["True", "False", "100", "Error"],
+      answer: "False",
+      explanation: "!= 代表「不等於」，100 等於 100，所以 100 != 100 為 False。"
+    },
+    {
+      topic: "條件判斷順序陷阱",
+      prompt: "分數 85 分時，這段程式會印出哪個等級？",
+      code: 'score = 85\nif score >= 60:\n    print("及格")\nelif score >= 80:\n    print("優秀")',
+      options: ["及格", "優秀", "及格 優秀", "不會輸出"],
+      answer: "及格",
+      explanation: "if / elif 由上往下判斷，85 先滿足了第一關 score >= 60，印出「及格」後就會跳出整個判斷結構。"
+    },
+
+    // --- 類別四：串列 List 基礎操作 (24~29) ---
+    {
+      topic: "串列 List 正向索引",
+      prompt: "勇者打開寶箱拿出了第一樣裝備，會印出什麼？",
+      code: 'chest = ["聖劍", "魔杖", "弓箭"]\nprint(chest[1])',
+      options: ["聖劍", "魔杖", "弓箭", "IndexError"],
+      answer: "魔杖",
+      explanation: "Python 串列的索引是從 0 開始計算的，索引 0 是聖劍，索引 1 是魔杖。"
+    },
+    {
+      topic: "串列 List 負向索引",
+      prompt: "勇者從背包拿出了哪一樣道具？",
+      code: 'items = ["藥水", "長劍", "盾牌", "金幣"]\nprint(items[-2])',
+      options: ["長劍", "盾牌", "金幣", "IndexError"],
+      answer: "盾牌",
+      explanation: "Python 的負數索引從右邊數過來，-1 是最後一個（金幣），-2 就是倒數第二個（盾牌）。"
+    },
+    {
+      topic: "串列切片 Slicing",
+      prompt: "這段切片會取出哪些數字？",
+      code: "nums = [10, 20, 30, 40, 50]\nprint(nums[1:3])",
+      options: ["[10, 20, 30]", "[20, 30]", "[20, 30, 40]", "[10, 20]"],
+      answer: "[20, 30]",
+      explanation: "切片 [1:3] 的規則是「包含開頭索引 1，不包含結尾索引 3」，所以只取索引 1 和 2。"
+    },
+    {
+      topic: "串列長度 len()",
+      prompt: "計算隊伍裡總共有幾位成員，輸出結果是多少？",
+      code: 'team = ["戰士", "法師", "牧師", "弓手"]\nprint(len(team))',
+      options: ["3", "4", "5", "Error"],
+      answer: "4",
+      explanation: "len() 函式可以計算串列中總共有幾個元素，team 裡面共有 4 位成員。"
+    },
+    {
+      topic: "串列最大值 max()",
+      prompt: "這段程式碼會找出哪一個最高傷害值？",
+      code: "damages = [45, 120, 88, 95]\nprint(max(damages))",
+      options: ["45", "120", "95", "4"],
+      answer: "120",
+      explanation: "內建函式 max() 可以直接回傳串列中的最大數值 120。"
+    },
+    {
+      topic: "串列總和 sum()",
+      prompt: "計算三回合總傷害，輸出結果為何？",
+      code: "hits = [10, 20, 30]\nprint(sum(hits))",
+      options: ["30", "60", "3", "[10, 20, 30]"],
+      answer: "60",
+      explanation: "sum() 會將串列中的所有數字加總，10 + 20 + 30 = 60。"
+    },
+
+    // --- 類別五：迴圈 for / while (30~34) ---
+    {
+      topic: "for 迴圈與 range",
+      prompt: "迴圈結束後，total 的值是多少？",
+      code: "total = 0\nfor i in range(4):\n    total += i\nprint(total)",
+      options: ["10", "6", "4", "3"],
+      answer: "6",
+      explanation: "range(4) 會產生 0, 1, 2, 3 四個數字（不包含 4），總和為 0+1+2+3 = 6。"
+    },
+    {
+      topic: "while 迴圈與 break",
+      prompt: "最終印出的 n 是多少？",
+      code: "n = 5\nwhile n > 0:\n    n -= 1\n    if n == 2:\n        break\nprint(n)",
+      options: ["0", "1", "2", "3"],
+      answer: "2",
+      explanation: "當 n 減 1 變成 2 時，觸發 if n == 2: 執行 break 強制跳出整個迴圈，所以 n 停留在 2。"
+    },
+    {
+      topic: "range 步進值參數",
+      prompt: "這個迴圈總共會執行幾次 print？",
+      code: "for i in range(1, 10, 3):\n    print(i)",
+      options: ["2 次", "3 次", "4 次", "9 次"],
+      answer: "3 次",
+      explanation: "range(1, 10, 3) 從 1 開始每次加 3，會產生 1, 4, 7 共 3 個數字。"
+    },
+    {
+      topic: "continue 跳過本輪",
+      prompt: "這段程式碼最終會印出什麼？",
+      code: "ans = 0\nfor x in [1, 2, 3]:\n    if x == 2:\n        continue\n    ans += x\nprint(ans)",
+      options: ["6", "4", "1", "3"],
+      answer: "4",
+      explanation: "當 x 等於 2 時執行 continue 跳過不加總，因此只加了 1 + 3 = 4。"
+    },
+    {
+      topic: "while 迴圈累計計算",
+      prompt: "當 while 迴圈結束後，count 的值是多少？",
+      code: "count = 1\nwhile count < 8:\n    count *= 2\nprint(count)",
+      options: ["4", "8", "16", "7"],
+      answer: "8",
+      explanation: "count 依序變化為 1 → 2 → 4 → 8；當變成 8 時不再小於 8，迴圈結束並印出 8。"
+    }
+  ];
+
+  // 怪物階段設定（15 題平均分配為 3 個階段，每隻怪物 5 題）
+  const MONSTERS = [
+    { name: "🟢 語法史萊姆", sprite: "🟢", maxHp: 120 }, // 第 1~5 題
+    { name: "🧙‍♂️ 哥布林巫師", sprite: "👺", maxHp: 150 }, // 第 6~10 題
+    { name: "🐉 語法巨龍 Boss", sprite: "🐉", maxHp: 150 } // 第 11~15 題
+  ];
+
+  // ==========================================
+  // 2. Web Audio API 簡易 8-bit 合成音效引擎
+  // ==========================================
+  let audioCtx = null;
+  let soundEnabled = true;
+
+  function playTone(freq, type, duration, vol = 0.15, slideTo = null) {
+    if (!soundEnabled) return;
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (slideTo) {
+      osc.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime + duration);
+    }
+
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  const SFX = {
+    attack: () => playTone(320, "square", 0.15, 0.15, 110),
+    crit: () => {
+      playTone(587.33, "sawtooth", 0.12, 0.18, 880);
+      setTimeout(() => playTone(880, "square", 0.2, 0.18, 1174), 90);
+    },
+    hit: () => playTone(140, "sawtooth", 0.35, 0.25, 45),
+    tick: () => playTone(800, "sine", 0.05, 0.08),
+    win: () => {
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+        setTimeout(() => playTone(f, "square", 0.18, 0.15), idx * 120);
+      });
+    },
+    lose: () => {
+      [300, 250, 200, 130].forEach((f, idx) => {
+        setTimeout(() => playTone(f, "sawtooth", 0.22, 0.18), idx * 150);
+      });
+    }
+  };
+
+  // ==========================================
+  // 3. 遊戲狀態變數與 DOM 綁定
+  // ==========================================
+  const QUESTIONS_PER_GAME = 15; // 每局隨機抽 15 題
+  const TIME_LIMIT = 15.0;       // 每題 15 秒
+  const DAMAGE_TO_HERO = 10;     // 答錯或超時扣 10 點血量
+
+  let activeQuestions = [];      // 本局隨機抽出的 15 題
+  let currentQIndex = 0;
+  let heroHp = 100;
+  let monsterHp = 120;
+  let monsterMaxHp = 120;
+  let currentMonsterStage = -1;
+  let score = 0;
+  let combo = 0;
+  let maxCombo = 0;
+  let timeLeft = TIME_LIMIT;
+  let timerInterval = null;
+  let lastTickSecond = 4;
+  let totalAnswerTime = 0;
+  let answeredCount = 0;
+  let wrongRecords = [];
+  let isTransitioning = false;
+
+  const el = {
+    gameContainer: document.getElementById("gameContainer"),
+    damageFlash: document.getElementById("damageFlash"),
+    scoreDisplay: document.getElementById("scoreDisplay"),
+    soundToggleBtn: document.getElementById("soundToggleBtn"),
+    heroHpText: document.getElementById("heroHpText"),
+    heroHpBar: document.getElementById("heroHpBar"),
+    comboDisplay: document.getElementById("comboDisplay"),
+    heroSprite: document.getElementById("heroSprite"),
+    monsterName: document.getElementById("monsterName"),
+    monsterHpText: document.getElementById("monsterHpText"),
+    monsterMaxHpText: document.getElementById("monsterMaxHpText"),
+    monsterHpBar: document.getElementById("monsterHpBar"),
+    monsterSprite: document.getElementById("monsterSprite"),
+    timerText: document.getElementById("timerText"),
+    timerBar: document.getElementById("timerBar"),
+    qTopic: document.getElementById("qTopic"),
+    qIndexText: document.getElementById("qIndexText"),
+    qPrompt: document.getElementById("qPrompt"),
+    qCode: document.getElementById("qCode"),
+    optionsGrid: document.getElementById("optionsGrid"),
+    battleStage: document.getElementById("battleStage"),
+    startModal: document.getElementById("startModal"),
+    explainModal: document.getElementById("explainModal"),
+    explainTitle: document.getElementById("explainTitle"),
+    explainCorrectAns: document.getElementById("explainCorrectAns"),
+    explainText: document.getElementById("explainText"),
+    endModal: document.getElementById("endModal"),
+    endTitle: document.getElementById("endTitle"),
+    endRankBadge: document.getElementById("endRankBadge"),
+    finalScore: document.getElementById("finalScore"),
+    finalMaxCombo: document.getElementById("finalMaxCombo"),
+    finalAvgTime: document.getElementById("finalAvgTime"),
+    wrongReviewContainer: document.getElementById("wrongReviewContainer"),
+    wrongReviewList: document.getElementById("wrongReviewList")
+  };
+
+  // ==========================================
+  // 4. 隨機洗牌演算法（Fisher-Yates Shuffle）
+  // ==========================================
+  function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  // ==========================================
+  // 5. 核心戰鬥與流程控制
+  // ==========================================
+  function initGame() {
+    // 從題庫中隨機抽取 15 題
+    activeQuestions = shuffleArray(QUESTION_BANK).slice(0, QUESTIONS_PER_GAME);
+
+    currentQIndex = 0;
+    heroHp = 100;
+    currentMonsterStage = -1;
+    score = 0;
+    combo = 0;
+    maxCombo = 0;
+    totalAnswerTime = 0;
+    answeredCount = 0;
+    wrongRecords = [];
+    isTransitioning = false;
+
+    el.startModal.classList.add("hidden");
+    el.explainModal.classList.add("hidden");
+    el.endModal.classList.add("hidden");
+
+    updateHeroUI();
+    loadQuestion();
+  }
+
+  function setupMonsterForQuestion(qIdx) {
+    let stage = 0;
+    if (qIdx >= 5 && qIdx <= 9) stage = 1;
+    else if (qIdx >= 10) stage = 2;
+
+    if (stage !== currentMonsterStage) {
+      currentMonsterStage = stage;
+      const m = MONSTERS[stage];
+      monsterMaxHp = m.maxHp;
+      monsterHp = m.maxHp;
+      el.monsterName.textContent = m.name;
+      el.monsterSprite.textContent = m.sprite;
+      el.monsterMaxHpText.textContent = monsterMaxHp;
+    }
+    updateMonsterUI();
+  }
+
+  function loadQuestion() {
+    if (currentQIndex >= activeQuestions.length) {
+      endGame(true);
+      return;
+    }
+
+    isTransitioning = false;
+    setupMonsterForQuestion(currentQIndex);
+
+    const q = activeQuestions[currentQIndex];
+    el.qTopic.textContent = `【${q.topic}】`;
+    el.qIndexText.textContent = currentQIndex + 1;
+    el.qPrompt.textContent = q.prompt;
+    el.qCode.textContent = q.code;
+
+    // 隨機打亂四個選項的顯示順序
+    const shuffledOptions = shuffleArray(q.options);
+    el.optionsGrid.innerHTML = "";
+    const labels = ["A", "B", "C", "D"];
+    shuffledOptions.forEach((opt, idx) => {
+      const btn = document.createElement("button");
+      btn.className = "skill-card";
+      btn.innerHTML = `<span class="key-badge">${labels[idx]}</span><span>${escapeHtml(opt)}</span>`;
+      btn.onclick = () => handleAnswer(opt);
+      el.optionsGrid.appendChild(btn);
+    });
+
+    startTimer();
+  }
+
+  function startTimer() {
+    clearInterval(timerInterval);
+    timeLeft = TIME_LIMIT;
+    lastTickSecond = 4;
+    updateTimerUI();
+
+    timerInterval = setInterval(() => {
+      timeLeft -= 0.05;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        updateTimerUI();
+        clearInterval(timerInterval);
+        handleTimeout();
+        return;
+      }
+
+      // 最後 3 秒滴答警示音
+      if (timeLeft <= 3 && Math.ceil(timeLeft) < lastTickSecond) {
+        lastTickSecond = Math.ceil(timeLeft);
+        SFX.tick();
+      }
+      updateTimerUI();
+    }, 50);
+  }
+
+  function updateTimerUI() {
+    el.timerText.textContent = `${timeLeft.toFixed(1)}s`;
+    const pct = (timeLeft / TIME_LIMIT) * 100;
+    el.timerBar.style.width = `${pct}%`;
+
+    if (pct > 66) el.timerBar.style.backgroundColor = "#2ecc71";
+    else if (pct > 33) el.timerBar.style.backgroundColor = "#f1c40f";
+    else el.timerBar.style.backgroundColor = "#e74c3c";
+  }
+
+  function disableOptions() {
+    const btns = el.optionsGrid.querySelectorAll("button");
+    btns.forEach(b => b.disabled = true);
+  }
+
+  function handleAnswer(selectedOption) {
+    if (isTransitioning) return;
+    isTransitioning = true;
+    clearInterval(timerInterval);
+    disableOptions();
+
+    const q = activeQuestions[currentQIndex];
+    const spent = TIME_LIMIT - timeLeft;
+    totalAnswerTime += spent;
+    answeredCount++;
+
+    if (selectedOption === q.answer) {
+      // 答對邏輯與速度暴擊判定（15 秒版本：>10秒暴擊，5~10秒普攻，<5秒擦傷）
+      combo++;
+      if (combo > maxCombo) maxCombo = combo;
+
+      let dmg = 15;
+      let label = "🗡️ 勉強擦傷 -15";
+      let color = "#ecf0f1";
+
+      if (timeLeft > 10) {
+        dmg = 35;
+        label = "⚡ 極速暴擊 -35!";
+        color = "#f1c40f";
+        SFX.crit();
+        triggerShake();
+      } else if (timeLeft >= 5) {
+        dmg = 25;
+        label = "⚔️ 普通斬擊 -25";
+        color = "#00d2d3";
+        SFX.attack();
+      } else {
+        SFX.attack();
+      }
+
+      // 連擊加分
+      const gainedScore = dmg * 10 + (combo - 1) * 50;
+      score += gainedScore;
+
+      monsterHp = Math.max(0, monsterHp - dmg);
+      el.heroSprite.classList.remove("hero-attack");
+      void el.heroSprite.offsetWidth;
+      el.heroSprite.classList.add("hero-attack");
+
+      spawnFloatingText(label, "70%", "35%", color);
+      updateHeroUI();
+      updateMonsterUI();
+
+      setTimeout(() => {
+        currentQIndex++;
+        loadQuestion();
+      }, 950);
+
+    } else {
+      // 答錯邏輯
+      processPlayerDamage(q, "❌ 咒語詠唱錯誤！");
+    }
+  }
+
+  function handleTimeout() {
+    if (isTransitioning) return;
+    isTransitioning = true;
+    disableOptions();
+
+    totalAnswerTime += TIME_LIMIT;
+    answeredCount++;
+
+    const q = activeQuestions[currentQIndex];
+    processPlayerDamage(q, "⏰ 蓄力時間到！遭到怪物突襲！");
+  }
+
+  function processPlayerDamage(questionObj, titleMsg) {
+    combo = 0;
+    heroHp = Math.max(0, heroHp - DAMAGE_TO_HERO);
+    SFX.hit();
+    triggerShake();
+    triggerRedFlash();
+
+    el.monsterSprite.classList.remove("monster-attack");
+    void el.monsterSprite.offsetWidth;
+    el.monsterSprite.classList.add("monster-attack");
+
+    spawnFloatingText(`💥 -${DAMAGE_TO_HERO} HP`, "22%", "35%", "#ff4757");
+    updateHeroUI();
+
+    wrongRecords.push({
+      qNum: currentQIndex + 1,
+      topic: questionObj.topic,
+      answer: questionObj.answer,
+      explanation: questionObj.explanation
+    });
+
+    setTimeout(() => {
+      if (heroHp <= 0) {
+        endGame(false);
+      } else {
+        // 顯示白話解析彈窗
+        el.explainTitle.textContent = titleMsg;
+        el.explainCorrectAns.textContent = questionObj.answer;
+        el.explainText.textContent = questionObj.explanation;
+        el.explainModal.classList.remove("hidden");
+      }
+    }, 650);
+  }
+
+  function updateHeroUI() {
+    el.scoreDisplay.textContent = score;
+    el.heroHpText.textContent = heroHp;
+    el.heroHpBar.style.width = `${heroHp}%`;
+    el.comboDisplay.textContent = combo >= 2 ? `🔥 ${combo} COMBO!` : "";
+  }
+
+  function updateMonsterUI() {
+    el.monsterHpText.textContent = monsterHp;
+    const pct = (monsterHp / monsterMaxHp) * 100;
+    el.monsterHpBar.style.width = `${pct}%`;
+  }
+
+  function triggerShake() {
+    el.gameContainer.classList.remove("shake");
+    void el.gameContainer.offsetWidth;
+    el.gameContainer.classList.add("shake");
+  }
+
+  function triggerRedFlash() {
+    el.damageFlash.style.opacity = "1";
+    setTimeout(() => {
+      el.damageFlash.style.opacity = "0";
+    }, 200);
+  }
+
+  function spawnFloatingText(text, leftPct, topPct, color) {
+    const div = document.createElement("div");
+    div.className = "floating-text";
+    div.textContent = text;
+    div.style.left = leftPct;
+    div.style.top = topPct;
+    div.style.color = color;
+    el.battleStage.appendChild(div);
+    setTimeout(() => div.remove(), 1000);
+  }
+
+  function endGame(isVictory) {
+    clearInterval(timerInterval);
+    el.explainModal.classList.add("hidden");
+    el.endModal.classList.remove("hidden");
+
+    const avgTime = answeredCount > 0 ? (totalAnswerTime / answeredCount).toFixed(1) : "0.0";
+    el.finalScore.textContent = score;
+    el.finalMaxCombo.textContent = maxCombo;
+    el.finalAvgTime.textContent = avgTime;
+
+    if (isVictory) {
+      SFX.win();
+      el.endTitle.textContent = "🏆 恭喜擊敗語法巨龍！";
+      el.endTitle.style.color = "var(--gold)";
+      if (wrongRecords.length === 0) {
+        el.endRankBadge.textContent = "稱號：【人肉 Python 編譯器・傳說大魔導士】";
+      } else if (wrongRecords.length <= 3) {
+        el.endRankBadge.textContent = "稱號：【穩健的白金語法騎士】";
+      } else {
+        el.endRankBadge.textContent = "稱號：【浴血奮戰的地城倖存者】";
+      }
+    } else {
+      SFX.lose();
+      el.endTitle.textContent = "💀 勇者力竭倒下了...";
+      el.endTitle.style.color = "#e74c3c";
+      el.endRankBadge.textContent = "稱號：【還需要多寫點 Code 的見習生】";
+    }
+
+    // 渲染錯題複習
+    if (wrongRecords.length > 0) {
+      el.wrongReviewContainer.classList.remove("hidden");
+      el.wrongReviewList.innerHTML = wrongRecords.map(r => `
+        <div class="review-item">
+          <div><strong>第 ${r.qNum} 題【${r.topic}】</strong> — 正解：<span style="color:#2ecc71;font-family:monospace;">${escapeHtml(r.answer)}</span></div>
+          <div style="color:#bdc3c7;margin-top:2px;">💡 ${escapeHtml(r.explanation)}</div>
+        </div>
+      `).join("");
+    } else {
+      el.wrongReviewContainer.classList.add("hidden");
+    }
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // 事件監聽
+  document.getElementById("startBtn").addEventListener("click", initGame);
+  document.getElementById("restartBtn").addEventListener("click", initGame);
+  document.getElementById("nextAfterExplainBtn").addEventListener("click", () => {
+    el.explainModal.classList.add("hidden");
+    currentQIndex++;
+    loadQuestion();
+  });
+
+  el.soundToggleBtn.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    el.soundToggleBtn.textContent = soundEnabled ? "🔊 音效：開" : "🔇 音效：關";
+  });
+</script>
+</body>
+</html>

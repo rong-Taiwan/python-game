@@ -525,7 +525,7 @@
       <div class="status-card">
         <div class="name-row">
           <span id="monsterName">🟢 語法史萊姆</span>
-          <span><span id="monsterHpText">100</span> / <span id="monsterMaxHpText">100</span></span>
+          <span><span id="monsterHpText">120</span> / <span id="monsterMaxHpText">120</span></span>
         </div>
         <div class="bar-bg">
           <div class="bar-fill monster-hp-fill" id="monsterHpBar" style="width: 100%;"></div>
@@ -548,7 +548,7 @@
   <div class="question-box">
     <div class="q-header">
       <span class="q-topic" id="qTopic">【變數與運算】</span>
-      <span class="q-progress">第 <span id="qIndexText">1</span> / 10 關</span>
+      <span class="q-progress">第 <span id="qIndexText">1</span> / 15 關</span>
     </div>
     <div class="q-prompt" id="qPrompt">題目載入中...</div>
     <pre class="code-block" id="qCode">print("Hello Python")</pre>
@@ -561,7 +561,7 @@
   <div class="modal-overlay" id="startModal">
     <div class="modal-card">
       <div class="modal-title">⚔️ 地城勇者：Python 語法對決</div>
-      <p class="modal-desc">每次挑戰將從 <strong>34 題基礎語法題庫</strong>中隨機抽出 <strong>10 題</strong>進行對決！在怪物蓄力完成前施放正確咒語吧！</p>
+      <p class="modal-desc">每次挑戰將從 <strong>34 題基礎語法題庫</strong>中隨機抽出 <strong>15 題</strong>進行對決！在怪物蓄力完成前施放正確咒語吧！</p>
       <div class="rule-list">
         <div>⏱️ <strong>限時對決：</strong>每題限時 <strong>15 秒</strong>，答對越快傷害越高！</div>
         <div>⚡ <strong>極速暴擊（剩餘 &gt; 10 秒）：</strong>造成 <strong>35 點</strong> 暴擊傷害</div>
@@ -598,7 +598,7 @@
         <div style="text-align: left; font-weight: bold; color: #ff7675;">📜 戰敗錯題復習筆記：</div>
         <div class="review-list" id="wrongReviewList"></div>
       </div>
-      <button class="btn-primary" id="restartBtn">🔄 再戰一場（重新隨機抽 10 題）</button>
+      <button class="btn-primary" id="restartBtn">🔄 再戰一場（重新隨機抽 15 題）</button>
     </div>
   </div>
 </div>
@@ -798,7 +798,15 @@
       explanation: "if / elif 由上往下判斷，85 先滿足了第一關 score >= 60，印出「及格」後就會跳出整個判斷結構。"
     },
 
-    // --- 類別四：串列 List 操作 (24~29) ---
+    // --- 類別四：串列 List 基礎操作 (24~29) ---
+    {
+      topic: "串列 List 正向索引",
+      prompt: "勇者打開寶箱拿出了第一樣裝備，會印出什麼？",
+      code: 'chest = ["聖劍", "魔杖", "弓箭"]\nprint(chest[1])',
+      options: ["聖劍", "魔杖", "弓箭", "IndexError"],
+      answer: "魔杖",
+      explanation: "Python 串列的索引是從 0 開始計算的，索引 0 是聖劍，索引 1 是魔杖。"
+    },
     {
       topic: "串列 List 負向索引",
       prompt: "勇者從背包拿出了哪一樣道具？",
@@ -816,12 +824,12 @@
       explanation: "切片 [1:3] 的規則是「包含開頭索引 1，不包含結尾索引 3」，所以只取索引 1 和 2。"
     },
     {
-      topic: "串列新增 append()",
-      prompt: "執行完以下程式後，team 串列的長度是多少？",
-      code: 'team = ["戰士", "法師"]\nteam.append("牧師")\nprint(len(team))',
-      options: ["2", "3", "4", "Error"],
-      answer: "3",
-      explanation: '.append("牧師") 會在串列尾端新增一個元素，長度從 2 變成 3。'
+      topic: "串列長度 len()",
+      prompt: "計算隊伍裡總共有幾位成員，輸出結果是多少？",
+      code: 'team = ["戰士", "法師", "牧師", "弓手"]\nprint(len(team))',
+      options: ["3", "4", "5", "Error"],
+      answer: "4",
+      explanation: "len() 函式可以計算串列中總共有幾個元素，team 裡面共有 4 位成員。"
     },
     {
       topic: "串列最大值 max()",
@@ -838,14 +846,6 @@
       options: ["30", "60", "3", "[10, 20, 30]"],
       answer: "60",
       explanation: "sum() 會將串列中的所有數字加總，10 + 20 + 30 = 60。"
-    },
-    {
-      topic: "串列移除元素 pop()",
-      prompt: "使用 pop() 取出最後一項道具後，bag 還剩下幾個元素？",
-      code: 'bag = ["紅水", "藍水", "回城卷"]\nbag.pop()\nprint(len(bag))',
-      options: ["3", "2", "1", "0"],
-      answer: "2",
-      explanation: "bag.pop() 預設會移除並回傳串列的最後一個元素（回城卷），因此剩下 2 個元素。"
     },
 
     // --- 類別五：迴圈 for / while (30~34) ---
@@ -891,11 +891,11 @@
     }
   ];
 
-  // 怪物階段設定（對應題號區間）
+  // 怪物階段設定（15 題平均分配為 3 個階段，每隻怪物 5 題）
   const MONSTERS = [
-    { name: "🟢 語法史萊姆", sprite: "🟢", maxHp: 100 }, // 第 1~4 題
-    { name: "🧙‍♂️ 哥布林巫師", sprite: "👺", maxHp: 120 }, // 第 5~8 題
-    { name: "🐉 語法巨龍 Boss", sprite: "🐉", maxHp: 100 } // 第 9~10 題
+    { name: "🟢 語法史萊姆", sprite: "🟢", maxHp: 120 }, // 第 1~5 題
+    { name: "🧙‍♂️ 哥布林巫師", sprite: "👺", maxHp: 150 }, // 第 6~10 題
+    { name: "🐉 語法巨龍 Boss", sprite: "🐉", maxHp: 150 } // 第 11~15 題
   ];
 
   // ==========================================
@@ -951,15 +951,15 @@
   // ==========================================
   // 3. 遊戲狀態變數與 DOM 綁定
   // ==========================================
-  const QUESTIONS_PER_GAME = 10; // 每局隨機抽 10 題
+  const QUESTIONS_PER_GAME = 15; // 每局隨機抽 15 題
   const TIME_LIMIT = 15.0;       // 每題 15 秒
   const DAMAGE_TO_HERO = 10;     // 答錯或超時扣 10 點血量
 
-  let activeQuestions = [];      // 本局隨機抽出的 10 題
+  let activeQuestions = [];      // 本局隨機抽出的 15 題
   let currentQIndex = 0;
   let heroHp = 100;
-  let monsterHp = 100;
-  let monsterMaxHp = 100;
+  let monsterHp = 120;
+  let monsterMaxHp = 120;
   let currentMonsterStage = -1;
   let score = 0;
   let combo = 0;
@@ -1025,7 +1025,7 @@
   // 5. 核心戰鬥與流程控制
   // ==========================================
   function initGame() {
-    // 從題庫中隨機抽取 10 題
+    // 從題庫中隨機抽取 15 題
     activeQuestions = shuffleArray(QUESTION_BANK).slice(0, QUESTIONS_PER_GAME);
 
     currentQIndex = 0;
@@ -1049,8 +1049,8 @@
 
   function setupMonsterForQuestion(qIdx) {
     let stage = 0;
-    if (qIdx >= 4 && qIdx <= 7) stage = 1;
-    else if (qIdx >= 8) stage = 2;
+    if (qIdx >= 5 && qIdx <= 9) stage = 1;
+    else if (qIdx >= 10) stage = 2;
 
     if (stage !== currentMonsterStage) {
       currentMonsterStage = stage;
@@ -1292,7 +1292,7 @@
       el.endTitle.style.color = "var(--gold)";
       if (wrongRecords.length === 0) {
         el.endRankBadge.textContent = "稱號：【人肉 Python 編譯器・傳說大魔導士】";
-      } else if (wrongRecords.length <= 2) {
+      } else if (wrongRecords.length <= 3) {
         el.endRankBadge.textContent = "稱號：【穩健的白金語法騎士】";
       } else {
         el.endRankBadge.textContent = "稱號：【浴血奮戰的地城倖存者】";
